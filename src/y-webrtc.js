@@ -411,8 +411,6 @@ export class Room {
     try {
       const currentState = this.awareness.getStates().get(targetClientId)
       const targetPeerId = currentState.peerId
-    } catch (e) {}
-    try {
       const conn = this.webrtcConns.get(targetPeerId)
       const utfEncoder = new TextEncoder('utf-8')
       encoding.writeVarUint8Array(messageEncoder,

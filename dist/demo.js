@@ -11404,11 +11404,9 @@
         break
       }
       case customMessage : {
-        console.log('receiving custom message');
         let message = readVarUint8Array(decoder);
         const utfDecoder = new TextDecoder('utf-8');
         message = utfDecoder.decode(message);
-        console.log(message);
         room.provider.emit('custom-message', [message]);
         break
       }
@@ -11684,7 +11682,6 @@
 
     broadcastCustomMessage (message) {
       const messageEncoder = createEncoder();
-      console.log('sending');
       writeVarUint(messageEncoder, customMessage);
       const utfEncoder = new TextEncoder('utf-8');
       writeVarUint8Array(messageEncoder, utfEncoder.encode(message));
@@ -11694,16 +11691,9 @@
     sendToUser (targetClientId, message) {
       const messageEncoder = createEncoder();
       writeVarUint(messageEncoder, customMessage);
-      console.log('sending to ', targetClientId);
-
-      console.log(this.awareness.getStates());
-      const currentState = this.awareness.getStates().get(targetClientId);
-      if (currentState == null) {
-        return
-      }
-      const targetPeerId = currentState.peerId;
       try {
-        console.log('send');
+        const currentState = this.awareness.getStates().get(targetClientId);
+        const targetPeerId = currentState.peerId;
         const conn = this.webrtcConns.get(targetPeerId);
         const utfEncoder = new TextEncoder('utf-8');
         writeVarUint8Array(messageEncoder,
