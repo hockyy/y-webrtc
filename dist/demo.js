@@ -596,21 +596,6 @@
   const hasContent = decoder => decoder.pos !== decoder.arr.length;
 
   /**
-   * Clone a decoder instance.
-   * Optionally set a new position parameter.
-   *
-   * @function
-   * @param {Decoder} decoder The decoder instance
-   * @param {number} [newPos] Defaults to current position
-   * @return {Decoder} A clone of `decoder`
-   */
-  const clone = (decoder, newPos = decoder.pos) => {
-    const _decoder = createDecoder(decoder.arr);
-    _decoder.pos = newPos;
-    return _decoder
-  };
-
-  /**
    * Create an Uint8Array view of the next `len` bytes and advance the position by `len`.
    *
    * Important: The Uint8Array still points to the underlying ArrayBuffer. Make sure to discard the result as soon as possible to prevent any memory leaks.
@@ -640,115 +625,12 @@
   const readVarUint8Array = decoder => readUint8Array(decoder, readVarUint(decoder));
 
   /**
-   * Read the rest of the content as an ArrayBuffer
-   * @function
-   * @param {Decoder} decoder
-   * @return {Uint8Array}
-   */
-  const readTailAsUint8Array = decoder => readUint8Array(decoder, decoder.arr.length - decoder.pos);
-
-  /**
-   * Skip one byte, jump to the next position.
-   * @function
-   * @param {Decoder} decoder The decoder instance
-   * @return {number} The next position
-   */
-  const skip8 = decoder => decoder.pos++;
-
-  /**
    * Read one byte as unsigned integer.
    * @function
    * @param {Decoder} decoder The decoder instance
    * @return {number} Unsigned 8-bit integer
    */
   const readUint8 = decoder => decoder.arr[decoder.pos++];
-
-  /**
-   * Read 2 bytes as unsigned integer.
-   *
-   * @function
-   * @param {Decoder} decoder
-   * @return {number} An unsigned integer.
-   */
-  const readUint16 = decoder => {
-    const uint =
-      decoder.arr[decoder.pos] +
-      (decoder.arr[decoder.pos + 1] << 8);
-    decoder.pos += 2;
-    return uint
-  };
-
-  /**
-   * Read 4 bytes as unsigned integer.
-   *
-   * @function
-   * @param {Decoder} decoder
-   * @return {number} An unsigned integer.
-   */
-  const readUint32 = decoder => {
-    const uint =
-      (decoder.arr[decoder.pos] +
-      (decoder.arr[decoder.pos + 1] << 8) +
-      (decoder.arr[decoder.pos + 2] << 16) +
-      (decoder.arr[decoder.pos + 3] << 24)) >>> 0;
-    decoder.pos += 4;
-    return uint
-  };
-
-  /**
-   * Read 4 bytes as unsigned integer in big endian order.
-   * (most significant byte first)
-   *
-   * @function
-   * @param {Decoder} decoder
-   * @return {number} An unsigned integer.
-   */
-  const readUint32BigEndian = decoder => {
-    const uint =
-      (decoder.arr[decoder.pos + 3] +
-      (decoder.arr[decoder.pos + 2] << 8) +
-      (decoder.arr[decoder.pos + 1] << 16) +
-      (decoder.arr[decoder.pos] << 24)) >>> 0;
-    decoder.pos += 4;
-    return uint
-  };
-
-  /**
-   * Look ahead without incrementing the position
-   * to the next byte and read it as unsigned integer.
-   *
-   * @function
-   * @param {Decoder} decoder
-   * @return {number} An unsigned integer.
-   */
-  const peekUint8 = decoder => decoder.arr[decoder.pos];
-
-  /**
-   * Look ahead without incrementing the position
-   * to the next byte and read it as unsigned integer.
-   *
-   * @function
-   * @param {Decoder} decoder
-   * @return {number} An unsigned integer.
-   */
-  const peekUint16 = decoder =>
-    decoder.arr[decoder.pos] +
-    (decoder.arr[decoder.pos + 1] << 8);
-
-  /**
-   * Look ahead without incrementing the position
-   * to the next byte and read it as unsigned integer.
-   *
-   * @function
-   * @param {Decoder} decoder
-   * @return {number} An unsigned integer.
-   */
-  const peekUint32 = decoder => (
-    decoder.arr[decoder.pos] +
-    (decoder.arr[decoder.pos + 1] << 8) +
-    (decoder.arr[decoder.pos + 2] << 16) +
-    (decoder.arr[decoder.pos + 3] << 24)
-  ) >>> 0;
 
   /**
    * Read unsigned integer (32bit) with variable length.
@@ -814,34 +696,6 @@
   };
 
   /**
-   * Look ahead and read varUint without incrementing position
-   *
-   * @function
-   * @param {Decoder} decoder
-   * @return {number}
-   */
-  const peekVarUint = decoder => {
-    const pos = decoder.pos;
-    const s = readVarUint(decoder);
-    decoder.pos = pos;
-    return s
-  };
-
-  /**
-   * Look ahead and read varUint without incrementing position
-   *
-   * @function
-   * @param {Decoder} decoder
-   * @return {number}
-   */
-  const peekVarInt = decoder => {
-    const pos = decoder.pos;
-    const s = readVarInt(decoder);
-    decoder.pos = pos;
-    return s
-  };
-
-  /**
    * We don't test this function anymore as we use native decoding/encoding by default now.
    * Better not modify this anymore..
    *
@@ -901,20 +755,6 @@
   const readVarString = utf8TextDecoder ? _readVarStringNative : _readVarStringPolyfill;
 
   /**
-   * Look ahead and read varString without incrementing position
-   *
-   * @function
-   * @param {Decoder} decoder
-   * @return {string}
-   */
-  const peekVarString = decoder => {
-    const pos = decoder.pos;
-    const s = readVarString(decoder);
-    decoder.pos = pos;
-    return s
-  };
-
-  /**
    * @param {Decoder} decoder
    * @param {number} len
    * @return {DataView}
@@ -939,11 +779,6 @@
    * @param {Decoder} decoder
    */
   const readBigInt64 = decoder => /** @type {any} */ (readFromDataView(decoder, 8)).getBigInt64(0, false);
-
-  /**
-   * @param {Decoder} decoder
-   */
-  const readBigUint64 = decoder => /** @type {any} */ (readFromDataView(decoder, 8)).getBigUint64(0, false);
 
   /**
    * @type {Array<function(Decoder):any>}
@@ -1024,61 +859,6 @@
     }
   }
 
-  class IntDiffDecoder extends Decoder {
-    /**
-     * @param {Uint8Array} uint8Array
-     * @param {number} start
-     */
-    constructor (uint8Array, start) {
-      super(uint8Array);
-      /**
-       * Current state
-       * @type {number}
-       */
-      this.s = start;
-    }
-
-    /**
-     * @return {number}
-     */
-    read () {
-      this.s += readVarInt(this);
-      return this.s
-    }
-  }
-
-  class RleIntDiffDecoder extends Decoder {
-    /**
-     * @param {Uint8Array} uint8Array
-     * @param {number} start
-     */
-    constructor (uint8Array, start) {
-      super(uint8Array);
-      /**
-       * Current state
-       * @type {number}
-       */
-      this.s = start;
-      this.count = 0;
-    }
-
-    /**
-     * @return {number}
-     */
-    read () {
-      if (this.count === 0) {
-        this.s += readVarInt(this);
-        if (hasContent(this)) {
-          this.count = readVarUint(this) + 1; // see encoder implementation for the reason why this is incremented
-        } else {
-          this.count = -1; // read the current value forever
-        }
-      }
-      this.count--;
-      return /** @type {number} */ (this.s)
-    }
-  }
-
   class UintOptRleDecoder extends Decoder {
     /**
      * @param {Uint8Array} uint8Array
@@ -1105,35 +885,6 @@
       }
       this.count--;
       return /** @type {number} */ (this.s)
-    }
-  }
-
-  class IncUintOptRleDecoder extends Decoder {
-    /**
-     * @param {Uint8Array} uint8Array
-     */
-    constructor (uint8Array) {
-      super(uint8Array);
-      /**
-       * @type {number}
-       */
-      this.s = 0;
-      this.count = 0;
-    }
-
-    read () {
-      if (this.count === 0) {
-        this.s = readVarInt(this);
-        // if the sign is negative, we read the count too, otherwise count is 1
-        const isNegative = isNegativeZero(this.s);
-        this.count = 1;
-        if (isNegative) {
-          this.s = -this.s;
-          this.count = readVarUint(this) + 2;
-        }
-      }
-      this.count--;
-      return /** @type {number} */ (this.s++)
     }
   }
 
@@ -1194,46 +945,6 @@
       return res
     }
   }
-
-  var decoding = /*#__PURE__*/Object.freeze({
-    __proto__: null,
-    Decoder: Decoder,
-    createDecoder: createDecoder,
-    hasContent: hasContent,
-    clone: clone,
-    readUint8Array: readUint8Array,
-    readVarUint8Array: readVarUint8Array,
-    readTailAsUint8Array: readTailAsUint8Array,
-    skip8: skip8,
-    readUint8: readUint8,
-    readUint16: readUint16,
-    readUint32: readUint32,
-    readUint32BigEndian: readUint32BigEndian,
-    peekUint8: peekUint8,
-    peekUint16: peekUint16,
-    peekUint32: peekUint32,
-    readVarUint: readVarUint,
-    readVarInt: readVarInt,
-    peekVarUint: peekVarUint,
-    peekVarInt: peekVarInt,
-    _readVarStringPolyfill: _readVarStringPolyfill,
-    _readVarStringNative: _readVarStringNative,
-    readVarString: readVarString,
-    peekVarString: peekVarString,
-    readFromDataView: readFromDataView,
-    readFloat32: readFloat32,
-    readFloat64: readFloat64,
-    readBigInt64: readBigInt64,
-    readBigUint64: readBigUint64,
-    readAny: readAny,
-    RleDecoder: RleDecoder,
-    IntDiffDecoder: IntDiffDecoder,
-    RleIntDiffDecoder: RleIntDiffDecoder,
-    UintOptRleDecoder: UintOptRleDecoder,
-    IncUintOptRleDecoder: IncUintOptRleDecoder,
-    IntDiffOptRleDecoder: IntDiffOptRleDecoder,
-    StringDecoder: StringDecoder
-  });
 
   /**
    * Utility functions to work with buffers (Uint8Array).
@@ -11693,7 +11404,12 @@
         break
       }
       case customMessage : {
-        console.log(decoding);
+        console.log("receiving custom message");
+        let message = readVarUint8Array(decoder);
+        const utfDecoder = new TextDecoder('utf-8');
+        message = utfDecoder.decode(message);
+        console.log(message);
+        room.provider.emit("custom-message", message);
         break
       }
       default:
@@ -11966,9 +11682,12 @@
       }
     }
 
-    broadcastCustomMessage () {
+    broadcastCustomMessage (message) {
       const messageEncoder = createEncoder();
+      console.log("sending");
       writeVarUint(messageEncoder, customMessage);
+      const utfEncoder = new TextEncoder("utf-8");
+      writeVarUint8Array(messageEncoder, utfEncoder.encode(message));
       broadcastRoomMessage(this, toUint8Array(messageEncoder));
     }
 

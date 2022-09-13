@@ -232,7 +232,12 @@ const readMessage = (room, buf, syncedCallback) => {
       break
     }
     case customMessage : {
-      console.log(decoding);
+      console.log("receiving custom message");
+      let message = decoding.readVarUint8Array(decoder);
+      const utfDecoder = new TextDecoder('utf-8');
+      message = utfDecoder.decode(message);
+      console.log(message);
+      room.provider.emit("custom-message", message);
       break
     }
     default:
@@ -505,9 +510,12 @@ class Room {
     }
   }
 
-  broadcastCustomMessage () {
+  broadcastCustomMessage (message) {
     const messageEncoder = encoding.createEncoder();
+    console.log("sending");
     encoding.writeVarUint(messageEncoder, customMessage);
+    const utfEncoder = new TextEncoder("utf-8");
+    encoding.writeVarUint8Array(messageEncoder, utfEncoder.encode(message));
     broadcastRoomMessage(this, encoding.toUint8Array(messageEncoder));
   }
 
