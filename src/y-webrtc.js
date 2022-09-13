@@ -121,12 +121,10 @@ const readMessage = (room, buf, syncedCallback) => {
       break
     }
     case customMessage : {
-      console.log("receiving custom message")
-      let message = decoding.readVarUint8Array(decoder);
+      let message = decoding.readVarUint8Array(decoder)
       const utfDecoder = new TextDecoder('utf-8')
       message = utfDecoder.decode(message)
-      console.log(message)
-      room.provider.emit("custom-message", [message])
+      room.provider.emit('custom-message', [message])
       break
     }
     default:
@@ -401,24 +399,26 @@ export class Room {
 
   broadcastCustomMessage (message) {
     const messageEncoder = encoding.createEncoder()
-    console.log("sending")
     encoding.writeVarUint(messageEncoder, customMessage)
-    const utfEncoder = new TextEncoder("utf-8")
+    const utfEncoder = new TextEncoder('utf-8')
     encoding.writeVarUint8Array(messageEncoder, utfEncoder.encode(message))
     broadcastRoomMessage(this, encoding.toUint8Array(messageEncoder))
   }
 
-  sendToUser (targetClientId) {
+  sendToUser (targetClientId, message) {
     const messageEncoder = encoding.createEncoder()
     encoding.writeVarUint(messageEncoder, customMessage)
-    for (const conn of this.webrtcConns) {
-      if (conn.remotePeerId === targetClientId) {
-        try {
-          conn.peer.send(encoding.toUint8Array(messageEncoder))
-        } catch (e) {}
-        break;
-      }
-    }
+    try {
+      const currentState = this.awareness.getStates().get(targetClientId)
+      const targetPeerId = currentState.peerId
+    } catch (e) {}
+    try {
+      const conn = this.webrtcConns.get(targetPeerId)
+      const utfEncoder = new TextEncoder('utf-8')
+      encoding.writeVarUint8Array(messageEncoder,
+        utfEncoder.encode(message))
+      conn.peer.send(encoding.toUint8Array(messageEncoder))
+    } catch (e) {}
   }
 
   connect () {
@@ -647,7 +647,7 @@ export class WebrtcProvider extends Observable {
     this.room = null
     this.key.then(key => {
       this.room = openRoom(doc, this, roomName, key)
-      this.emit("set-peer-id", [this.room.peerId]);
+      this.emit('set-peer-id', [this.room.peerId])
       if (this.shouldConnect) {
         this.room.connect()
       } else {
