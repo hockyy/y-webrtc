@@ -237,7 +237,7 @@ const readMessage = (room, buf, syncedCallback) => {
       const utfDecoder = new TextDecoder('utf-8');
       message = utfDecoder.decode(message);
       console.log(message);
-      room.provider.emit("custom-message", message);
+      room.provider.emit("custom-message", [message]);
       break
     }
     default:
@@ -519,11 +519,11 @@ class Room {
     broadcastRoomMessage(this, encoding.toUint8Array(messageEncoder));
   }
 
-  sendToUser (customRemotePeerId) {
+  sendToUser (targetClientId) {
     const messageEncoder = encoding.createEncoder();
     encoding.writeVarUint(messageEncoder, customMessage);
     for (const conn of this.webrtcConns) {
-      if (conn.remotePeerId === customRemotePeerId) {
+      if (conn.remotePeerId === targetClientId) {
         try {
           conn.peer.send(encoding.toUint8Array(messageEncoder));
         } catch (e) {}
@@ -758,6 +758,7 @@ class WebrtcProvider extends observable.Observable {
     this.room = null;
     this.key.then(key => {
       this.room = openRoom(doc, this, roomName, key);
+      this.emit("set-peer-id", [this.room.peerId]);
       if (this.shouldConnect) {
         this.room.connect();
       } else {
