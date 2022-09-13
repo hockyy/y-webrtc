@@ -596,6 +596,21 @@
   const hasContent = decoder => decoder.pos !== decoder.arr.length;
 
   /**
+   * Clone a decoder instance.
+   * Optionally set a new position parameter.
+   *
+   * @function
+   * @param {Decoder} decoder The decoder instance
+   * @param {number} [newPos] Defaults to current position
+   * @return {Decoder} A clone of `decoder`
+   */
+  const clone = (decoder, newPos = decoder.pos) => {
+    const _decoder = createDecoder(decoder.arr);
+    _decoder.pos = newPos;
+    return _decoder
+  };
+
+  /**
    * Create an Uint8Array view of the next `len` bytes and advance the position by `len`.
    *
    * Important: The Uint8Array still points to the underlying ArrayBuffer. Make sure to discard the result as soon as possible to prevent any memory leaks.
@@ -625,12 +640,115 @@
   const readVarUint8Array = decoder => readUint8Array(decoder, readVarUint(decoder));
 
   /**
+   * Read the rest of the content as an ArrayBuffer
+   * @function
+   * @param {Decoder} decoder
+   * @return {Uint8Array}
+   */
+  const readTailAsUint8Array = decoder => readUint8Array(decoder, decoder.arr.length - decoder.pos);
+
+  /**
+   * Skip one byte, jump to the next position.
+   * @function
+   * @param {Decoder} decoder The decoder instance
+   * @return {number} The next position
+   */
+  const skip8 = decoder => decoder.pos++;
+
+  /**
    * Read one byte as unsigned integer.
    * @function
    * @param {Decoder} decoder The decoder instance
    * @return {number} Unsigned 8-bit integer
    */
   const readUint8 = decoder => decoder.arr[decoder.pos++];
+
+  /**
+   * Read 2 bytes as unsigned integer.
+   *
+   * @function
+   * @param {Decoder} decoder
+   * @return {number} An unsigned integer.
+   */
+  const readUint16 = decoder => {
+    const uint =
+      decoder.arr[decoder.pos] +
+      (decoder.arr[decoder.pos + 1] << 8);
+    decoder.pos += 2;
+    return uint
+  };
+
+  /**
+   * Read 4 bytes as unsigned integer.
+   *
+   * @function
+   * @param {Decoder} decoder
+   * @return {number} An unsigned integer.
+   */
+  const readUint32 = decoder => {
+    const uint =
+      (decoder.arr[decoder.pos] +
+      (decoder.arr[decoder.pos + 1] << 8) +
+      (decoder.arr[decoder.pos + 2] << 16) +
+      (decoder.arr[decoder.pos + 3] << 24)) >>> 0;
+    decoder.pos += 4;
+    return uint
+  };
+
+  /**
+   * Read 4 bytes as unsigned integer in big endian order.
+   * (most significant byte first)
+   *
+   * @function
+   * @param {Decoder} decoder
+   * @return {number} An unsigned integer.
+   */
+  const readUint32BigEndian = decoder => {
+    const uint =
+      (decoder.arr[decoder.pos + 3] +
+      (decoder.arr[decoder.pos + 2] << 8) +
+      (decoder.arr[decoder.pos + 1] << 16) +
+      (decoder.arr[decoder.pos] << 24)) >>> 0;
+    decoder.pos += 4;
+    return uint
+  };
+
+  /**
+   * Look ahead without incrementing the position
+   * to the next byte and read it as unsigned integer.
+   *
+   * @function
+   * @param {Decoder} decoder
+   * @return {number} An unsigned integer.
+   */
+  const peekUint8 = decoder => decoder.arr[decoder.pos];
+
+  /**
+   * Look ahead without incrementing the position
+   * to the next byte and read it as unsigned integer.
+   *
+   * @function
+   * @param {Decoder} decoder
+   * @return {number} An unsigned integer.
+   */
+  const peekUint16 = decoder =>
+    decoder.arr[decoder.pos] +
+    (decoder.arr[decoder.pos + 1] << 8);
+
+  /**
+   * Look ahead without incrementing the position
+   * to the next byte and read it as unsigned integer.
+   *
+   * @function
+   * @param {Decoder} decoder
+   * @return {number} An unsigned integer.
+   */
+  const peekUint32 = decoder => (
+    decoder.arr[decoder.pos] +
+    (decoder.arr[decoder.pos + 1] << 8) +
+    (decoder.arr[decoder.pos + 2] << 16) +
+    (decoder.arr[decoder.pos + 3] << 24)
+  ) >>> 0;
 
   /**
    * Read unsigned integer (32bit) with variable length.
@@ -696,6 +814,34 @@
   };
 
   /**
+   * Look ahead and read varUint without incrementing position
+   *
+   * @function
+   * @param {Decoder} decoder
+   * @return {number}
+   */
+  const peekVarUint = decoder => {
+    const pos = decoder.pos;
+    const s = readVarUint(decoder);
+    decoder.pos = pos;
+    return s
+  };
+
+  /**
+   * Look ahead and read varUint without incrementing position
+   *
+   * @function
+   * @param {Decoder} decoder
+   * @return {number}
+   */
+  const peekVarInt = decoder => {
+    const pos = decoder.pos;
+    const s = readVarInt(decoder);
+    decoder.pos = pos;
+    return s
+  };
+
+  /**
    * We don't test this function anymore as we use native decoding/encoding by default now.
    * Better not modify this anymore..
    *
@@ -755,6 +901,20 @@
   const readVarString = utf8TextDecoder ? _readVarStringNative : _readVarStringPolyfill;
 
   /**
+   * Look ahead and read varString without incrementing position
+   *
+   * @function
+   * @param {Decoder} decoder
+   * @return {string}
+   */
+  const peekVarString = decoder => {
+    const pos = decoder.pos;
+    const s = readVarString(decoder);
+    decoder.pos = pos;
+    return s
+  };
+
+  /**
    * @param {Decoder} decoder
    * @param {number} len
    * @return {DataView}
@@ -779,6 +939,11 @@
    * @param {Decoder} decoder
    */
   const readBigInt64 = decoder => /** @type {any} */ (readFromDataView(decoder, 8)).getBigInt64(0, false);
+
+  /**
+   * @param {Decoder} decoder
+   */
+  const readBigUint64 = decoder => /** @type {any} */ (readFromDataView(decoder, 8)).getBigUint64(0, false);
 
   /**
    * @type {Array<function(Decoder):any>}
@@ -859,6 +1024,61 @@
     }
   }
 
+  class IntDiffDecoder extends Decoder {
+    /**
+     * @param {Uint8Array} uint8Array
+     * @param {number} start
+     */
+    constructor (uint8Array, start) {
+      super(uint8Array);
+      /**
+       * Current state
+       * @type {number}
+       */
+      this.s = start;
+    }
+
+    /**
+     * @return {number}
+     */
+    read () {
+      this.s += readVarInt(this);
+      return this.s
+    }
+  }
+
+  class RleIntDiffDecoder extends Decoder {
+    /**
+     * @param {Uint8Array} uint8Array
+     * @param {number} start
+     */
+    constructor (uint8Array, start) {
+      super(uint8Array);
+      /**
+       * Current state
+       * @type {number}
+       */
+      this.s = start;
+      this.count = 0;
+    }
+
+    /**
+     * @return {number}
+     */
+    read () {
+      if (this.count === 0) {
+        this.s += readVarInt(this);
+        if (hasContent(this)) {
+          this.count = readVarUint(this) + 1; // see encoder implementation for the reason why this is incremented
+        } else {
+          this.count = -1; // read the current value forever
+        }
+      }
+      this.count--;
+      return /** @type {number} */ (this.s)
+    }
+  }
+
   class UintOptRleDecoder extends Decoder {
     /**
      * @param {Uint8Array} uint8Array
@@ -885,6 +1105,35 @@
       }
       this.count--;
       return /** @type {number} */ (this.s)
+    }
+  }
+
+  class IncUintOptRleDecoder extends Decoder {
+    /**
+     * @param {Uint8Array} uint8Array
+     */
+    constructor (uint8Array) {
+      super(uint8Array);
+      /**
+       * @type {number}
+       */
+      this.s = 0;
+      this.count = 0;
+    }
+
+    read () {
+      if (this.count === 0) {
+        this.s = readVarInt(this);
+        // if the sign is negative, we read the count too, otherwise count is 1
+        const isNegative = isNegativeZero(this.s);
+        this.count = 1;
+        if (isNegative) {
+          this.s = -this.s;
+          this.count = readVarUint(this) + 2;
+        }
+      }
+      this.count--;
+      return /** @type {number} */ (this.s++)
     }
   }
 
@@ -945,6 +1194,46 @@
       return res
     }
   }
+
+  var decoding = /*#__PURE__*/Object.freeze({
+    __proto__: null,
+    Decoder: Decoder,
+    createDecoder: createDecoder,
+    hasContent: hasContent,
+    clone: clone,
+    readUint8Array: readUint8Array,
+    readVarUint8Array: readVarUint8Array,
+    readTailAsUint8Array: readTailAsUint8Array,
+    skip8: skip8,
+    readUint8: readUint8,
+    readUint16: readUint16,
+    readUint32: readUint32,
+    readUint32BigEndian: readUint32BigEndian,
+    peekUint8: peekUint8,
+    peekUint16: peekUint16,
+    peekUint32: peekUint32,
+    readVarUint: readVarUint,
+    readVarInt: readVarInt,
+    peekVarUint: peekVarUint,
+    peekVarInt: peekVarInt,
+    _readVarStringPolyfill: _readVarStringPolyfill,
+    _readVarStringNative: _readVarStringNative,
+    readVarString: readVarString,
+    peekVarString: peekVarString,
+    readFromDataView: readFromDataView,
+    readFloat32: readFloat32,
+    readFloat64: readFloat64,
+    readBigInt64: readBigInt64,
+    readBigUint64: readBigUint64,
+    readAny: readAny,
+    RleDecoder: RleDecoder,
+    IntDiffDecoder: IntDiffDecoder,
+    RleIntDiffDecoder: RleIntDiffDecoder,
+    UintOptRleDecoder: UintOptRleDecoder,
+    IncUintOptRleDecoder: IncUintOptRleDecoder,
+    IntDiffOptRleDecoder: IntDiffOptRleDecoder,
+    StringDecoder: StringDecoder
+  });
 
   /**
    * Utility functions to work with buffers (Uint8Array).
@@ -11309,6 +11598,7 @@
   const messageQueryAwareness = 3;
   const messageAwareness = 1;
   const messageBcPeerId = 4;
+  const customMessage = 5;
 
   /**
    * @type {Map<string, SignalingConn>}
@@ -11356,8 +11646,10 @@
     switch (messageType) {
       case messageSync: {
         writeVarUint(encoder, messageSync);
-        const syncMessageType = readSyncMessage(decoder, encoder, doc, room);
-        if (syncMessageType === messageYjsSyncStep2 && !room.synced) {
+        const syncMessageType = readSyncMessage(decoder, encoder,
+          doc, room);
+        if (syncMessageType === messageYjsSyncStep2
+          && !room.synced) {
           syncedCallback();
         }
         if (syncMessageType === messageYjsSyncStep1) {
@@ -11367,16 +11659,20 @@
       }
       case messageQueryAwareness:
         writeVarUint(encoder, messageAwareness);
-        writeVarUint8Array(encoder, encodeAwarenessUpdate(awareness, Array.from(awareness.getStates().keys())));
+        writeVarUint8Array(encoder,
+          encodeAwarenessUpdate(awareness,
+            Array.from(awareness.getStates().keys())));
         sendReply = true;
         break
       case messageAwareness:
-        applyAwarenessUpdate(awareness, readVarUint8Array(decoder), room);
+        applyAwarenessUpdate(awareness,
+          readVarUint8Array(decoder), room);
         break
       case messageBcPeerId: {
         const add = readUint8(decoder) === 1;
         const peerName = readVarString(decoder);
-        if (peerName !== room.peerId && ((room.bcConns.has(peerName) && !add) || (!room.bcConns.has(peerName) && add))) {
+        if (peerName !== room.peerId && ((room.bcConns.has(peerName) && !add)
+          || (!room.bcConns.has(peerName) && add))) {
           const removed = [];
           const added = [];
           if (add) {
@@ -11394,6 +11690,10 @@
           }]);
           broadcastBcPeerId(room);
         }
+        break
+      }
+      case customMessage : {
+        console.log(decoding);
         break
       }
       default:
@@ -11414,10 +11714,12 @@
    */
   const readPeerMessage = (peerConn, buf) => {
     const room = peerConn.room;
-    log('received message from ', BOLD, peerConn.remotePeerId, GREY, ' (', room.name, ')', UNBOLD, UNCOLOR);
+    log('received message from ', BOLD, peerConn.remotePeerId,
+      GREY, ' (', room.name, ')', UNBOLD, UNCOLOR);
     return readMessage(room, buf, () => {
       peerConn.synced = true;
-      log('synced ', BOLD, room.name, UNBOLD, ' with ', BOLD, peerConn.remotePeerId);
+      log('synced ', BOLD, room.name, UNBOLD, ' with ',
+        BOLD, peerConn.remotePeerId);
       checkIsSynced(room);
     })
   };
@@ -11427,7 +11729,8 @@
    * @param {encoding.Encoder} encoder
    */
   const sendWebrtcConn = (webrtcConn, encoder) => {
-    log('send message to ', BOLD, webrtcConn.remotePeerId, UNBOLD, GREY, ' (', webrtcConn.room.name, ')', UNCOLOR);
+    log('send message to ', BOLD, webrtcConn.remotePeerId, UNBOLD,
+      GREY, ' (', webrtcConn.room.name, ')', UNCOLOR);
     try {
       webrtcConn.peer.send(toUint8Array(encoder));
     } catch (e) {}
@@ -11465,7 +11768,8 @@
        */
       this.peer = new simplepeer_min({ initiator, ...room.provider.peerOpts });
       this.peer.on('signal', signal => {
-        publishSignalingMessage(signalingConn, room, { to: remotePeerId, from: room.peerId, type: 'signal', signal });
+        publishSignalingMessage(signalingConn, room,
+          { to: remotePeerId, from: room.peerId, type: 'signal', signal });
       });
       this.peer.on('connect', () => {
         log('connected to ', BOLD, remotePeerId);
@@ -11482,7 +11786,9 @@
         if (awarenessStates.size > 0) {
           const encoder = createEncoder();
           writeVarUint(encoder, messageAwareness);
-          writeVarUint8Array(encoder, encodeAwarenessUpdate(awareness, Array.from(awarenessStates.keys())));
+          writeVarUint8Array(encoder,
+            encodeAwarenessUpdate(awareness,
+              Array.from(awarenessStates.keys())));
           sendWebrtcConn(this, encoder);
         }
       });
@@ -11524,10 +11830,11 @@
    * @param {Room} room
    * @param {Uint8Array} m
    */
-  const broadcastBcMessage = (room, m) => encrypt(m, room.key).then(data =>
-    room.mux(() =>
-      publish(room.name, data)
-    )
+  const broadcastBcMessage = (room, m) => encrypt(m, room.key).then(
+    data =>
+      room.mux(() =>
+        publish(room.name, data)
+      )
   );
 
   /**
@@ -11550,7 +11857,8 @@
       if (conn.connected) {
         conn.send({ type: 'subscribe', topics: [room.name] });
         if (room.webrtcConns.size < room.provider.maxConns) {
-          publishSignalingMessage(conn, room, { type: 'announce', from: room.peerId });
+          publishSignalingMessage(conn, room,
+            { type: 'announce', from: room.peerId });
         }
       }
     });
@@ -11638,12 +11946,14 @@
         const changedClients = added.concat(updated).concat(removed);
         const encoderAwareness = createEncoder();
         writeVarUint(encoderAwareness, messageAwareness);
-        writeVarUint8Array(encoderAwareness, encodeAwarenessUpdate(this.awareness, changedClients));
+        writeVarUint8Array(encoderAwareness,
+          encodeAwarenessUpdate(this.awareness, changedClients));
         broadcastRoomMessage(this, toUint8Array(encoderAwareness));
       };
 
       this._beforeUnloadHandler = () => {
-        removeAwarenessStates(this.awareness, [doc.clientID], 'window unload');
+        removeAwarenessStates(this.awareness, [doc.clientID],
+          'window unload');
         rooms.forEach(room => {
           room.disconnect();
         });
@@ -11653,6 +11963,25 @@
         window.addEventListener('beforeunload', this._beforeUnloadHandler);
       } else if (typeof process !== 'undefined') {
         process.on('exit', this._beforeUnloadHandler);
+      }
+    }
+
+    broadcastCustomMessage () {
+      const messageEncoder = createEncoder();
+      writeVarUint(messageEncoder, customMessage);
+      broadcastRoomMessage(this, toUint8Array(messageEncoder));
+    }
+
+    broadcastToUser (customRemotePeerId) {
+      const messageEncoder = createEncoder();
+      writeVarUint(messageEncoder, customMessage);
+      for (const conn of this.webrtcConns) {
+        if (conn.remotePeerId === customRemotePeerId) {
+          try {
+            conn.peer.send(toUint8Array(messageEncoder));
+          } catch (e) {}
+          break;
+        }
       }
     }
 
@@ -11683,7 +12012,9 @@
       // broadcast local awareness state
       const encoderAwarenessState = createEncoder();
       writeVarUint(encoderAwarenessState, messageAwareness);
-      writeVarUint8Array(encoderAwarenessState, encodeAwarenessUpdate(this.awareness, [this.doc.clientID]));
+      writeVarUint8Array(encoderAwarenessState,
+        encodeAwarenessUpdate(this.awareness,
+          [this.doc.clientID]));
       broadcastBcMessage(this, toUint8Array(encoderAwarenessState));
     }
 
@@ -11694,7 +12025,8 @@
           conn.send({ type: 'unsubscribe', topics: [this.name] });
         }
       });
-      removeAwarenessStates(this.awareness, [this.doc.clientID], 'disconnect');
+      removeAwarenessStates(this.awareness, [this.doc.clientID],
+        'disconnect');
       // broadcast peerId removal via broadcastchannel
       const encoderPeerIdBc = createEncoder();
       writeVarUint(encoderPeerIdBc, messageBcPeerId);
@@ -11744,7 +12076,8 @@
   const publishSignalingMessage = (conn, room, data) => {
     if (room.key) {
       encryptJson(data, room.key).then(data => {
-        conn.send({ type: 'publish', topic: room.name, data: toBase64(data) });
+        conn.send(
+          { type: 'publish', topic: room.name, data: toBase64(data) });
       });
     } else {
       conn.send({ type: 'publish', topic: room.name, data });
@@ -11763,7 +12096,8 @@
         const topics = Array.from(rooms.keys());
         this.send({ type: 'subscribe', topics });
         rooms.forEach(room =>
-          publishSignalingMessage(this, room, { type: 'announce', from: room.peerId })
+          publishSignalingMessage(this, room,
+            { type: 'announce', from: room.peerId })
         );
       });
       this.on('message', m => {
@@ -11777,7 +12111,8 @@
             const execMessage = data => {
               const webrtcConns = room.webrtcConns;
               const peerId = room.peerId;
-              if (data == null || data.from === peerId || (data.to !== undefined && data.to !== peerId) || room.bcConns.has(data.from)) {
+              if (data == null || data.from === peerId || (data.to !== undefined
+                && data.to !== peerId) || room.bcConns.has(data.from)) {
                 // ignore messages that are not addressed to this conn, or from clients that are connected via broadcastchannel
                 return
               }
@@ -11793,13 +12128,16 @@
               switch (data.type) {
                 case 'announce':
                   if (webrtcConns.size < room.provider.maxConns) {
-                    setIfUndefined(webrtcConns, data.from, () => new WebrtcConn(this, true, data.from, room));
+                    setIfUndefined(webrtcConns, data.from,
+                      () => new WebrtcConn(this, true, data.from, room));
                     emitPeerChange();
                   }
                   break
                 case 'signal':
                   if (data.to === peerId) {
-                    setIfUndefined(webrtcConns, data.from, () => new WebrtcConn(this, false, data.from, room)).peer.signal(data.signal);
+                    setIfUndefined(webrtcConns, data.from,
+                      () => new WebrtcConn(this, false, data.from,
+                        room)).peer.signal(data.signal);
                     emitPeerChange();
                   }
                   break
@@ -11807,7 +12145,8 @@
             };
             if (room.key) {
               if (typeof m.data === 'string') {
-                decryptJson(fromBase64(m.data), room.key).then(execMessage);
+                decryptJson(fromBase64(m.data), room.key).then(
+                  execMessage);
               }
             } else {
               execMessage(m.data);
@@ -11838,7 +12177,9 @@
       roomName,
       doc,
       {
-        signaling = ['wss://signaling.yjs.dev', 'wss://y-webrtc-signaling-eu.herokuapp.com', 'wss://y-webrtc-signaling-us.herokuapp.com'],
+        signaling = ['wss://signaling.yjs.dev',
+          'wss://y-webrtc-signaling-eu.herokuapp.com',
+          'wss://y-webrtc-signaling-us.herokuapp.com'],
         password = null,
         awareness = new Awareness(doc),
         maxConns = 20 + floor(rand() * 15), // the random factor reduces the chance that n clients form a cluster
@@ -11862,7 +12203,8 @@
       /**
        * @type {PromiseLike<CryptoKey | null>}
        */
-      this.key = password ? deriveKey(password, roomName) : /** @type {PromiseLike<null>} */ (resolve(null));
+      this.key = password ? deriveKey(password, roomName)
+        : /** @type {PromiseLike<null>} */ (resolve(null));
       /**
        * @type {Room|null}
        */
@@ -11890,7 +12232,8 @@
     connect () {
       this.shouldConnect = true;
       this.signalingUrls.forEach(url => {
-        const signalingConn = setIfUndefined(signalingConns, url, () => new SignalingConn(url));
+        const signalingConn = setIfUndefined(signalingConns, url,
+          () => new SignalingConn(url));
         this.signalingConns.push(signalingConn);
         signalingConn.providers.add(this);
       });

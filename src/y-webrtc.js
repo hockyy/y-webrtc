@@ -403,14 +403,14 @@ export class Room {
   broadcastToUser (customRemotePeerId) {
     const messageEncoder = encoding.createEncoder()
     encoding.writeVarUint(messageEncoder, customMessage)
-    this.webrtcConns.forEach(conn => {
+    for (const conn of this.webrtcConns) {
       if (conn.remotePeerId === customRemotePeerId) {
         try {
           conn.peer.send(encoding.toUint8Array(messageEncoder))
         } catch (e) {}
-        break
+        break;
       }
-    })
+    }
   }
 
   connect () {
