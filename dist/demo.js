@@ -11972,7 +11972,7 @@
       broadcastRoomMessage(this, toUint8Array(messageEncoder));
     }
 
-    broadcastToUser (customRemotePeerId) {
+    sendToUser (customRemotePeerId) {
       const messageEncoder = createEncoder();
       writeVarUint(messageEncoder, customMessage);
       for (const conn of this.webrtcConns) {

@@ -400,7 +400,7 @@ export class Room {
     broadcastRoomMessage(this, encoding.toUint8Array(messageEncoder))
   }
 
-  broadcastToUser (customRemotePeerId) {
+  sendToUser (customRemotePeerId) {
     const messageEncoder = encoding.createEncoder()
     encoding.writeVarUint(messageEncoder, customMessage)
     for (const conn of this.webrtcConns) {
