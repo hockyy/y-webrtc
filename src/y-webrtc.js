@@ -122,7 +122,7 @@ const readMessage = (room, buf, syncedCallback) => {
     }
     case customMessage : {
       let message = decoding.readVarUint8Array(decoder)
-      const utfDecoder = new TextDecoder('utf-8')
+      const utfDecoder = new TextDecoder('utf-16')
       message = utfDecoder.decode(message)
       room.provider.emit('custom-message', [message])
       break
@@ -400,7 +400,7 @@ export class Room {
   broadcastCustomMessage (message) {
     const messageEncoder = encoding.createEncoder()
     encoding.writeVarUint(messageEncoder, customMessage)
-    const utfEncoder = new TextEncoder('utf-8')
+    const utfEncoder = new TextEncoder('utf-16')
     encoding.writeVarUint8Array(messageEncoder, utfEncoder.encode(message))
     broadcastRoomMessage(this, encoding.toUint8Array(messageEncoder))
   }
@@ -412,7 +412,7 @@ export class Room {
       const currentState = this.awareness.getStates().get(targetClientId)
       const targetPeerId = currentState.peerId
       const conn = this.webrtcConns.get(targetPeerId)
-      const utfEncoder = new TextEncoder('utf-8')
+      const utfEncoder = new TextEncoder('utf-16')
       encoding.writeVarUint8Array(messageEncoder,
         utfEncoder.encode(message))
       conn.peer.send(encoding.toUint8Array(messageEncoder))

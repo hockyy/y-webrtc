@@ -11405,7 +11405,7 @@
       }
       case customMessage : {
         let message = readVarUint8Array(decoder);
-        const utfDecoder = new TextDecoder('utf-8');
+        const utfDecoder = new TextDecoder('utf-16');
         message = utfDecoder.decode(message);
         room.provider.emit('custom-message', [message]);
         break
@@ -11683,7 +11683,7 @@
     broadcastCustomMessage (message) {
       const messageEncoder = createEncoder();
       writeVarUint(messageEncoder, customMessage);
-      const utfEncoder = new TextEncoder('utf-8');
+      const utfEncoder = new TextEncoder('utf-16');
       writeVarUint8Array(messageEncoder, utfEncoder.encode(message));
       broadcastRoomMessage(this, toUint8Array(messageEncoder));
     }
@@ -11695,7 +11695,7 @@
         const currentState = this.awareness.getStates().get(targetClientId);
         const targetPeerId = currentState.peerId;
         const conn = this.webrtcConns.get(targetPeerId);
-        const utfEncoder = new TextEncoder('utf-8');
+        const utfEncoder = new TextEncoder('utf-16');
         writeVarUint8Array(messageEncoder,
           utfEncoder.encode(message));
         conn.peer.send(toUint8Array(messageEncoder));
