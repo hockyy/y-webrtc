@@ -11354,11 +11354,13 @@
     const awareness = room.awareness;
     const doc = room.doc;
     let sendReply = false;
+    console.log(messageType);
     switch (messageType) {
       case messageSync: {
         writeVarUint(encoder, messageSync);
         const syncMessageType = readSyncMessage(decoder, encoder,
           doc, room);
+        console.log(syncMessageType);
         if (syncMessageType === messageYjsSyncStep2
           && !room.synced) {
           syncedCallback();
@@ -11369,6 +11371,7 @@
         break
       }
       case messageQueryAwareness:
+        console.log("QureyAwareness");
         writeVarUint(encoder, messageAwareness);
         writeVarUint8Array(encoder,
           encodeAwarenessUpdate(awareness,
@@ -11376,10 +11379,12 @@
         sendReply = true;
         break
       case messageAwareness:
+        console.log("MessageAwareness");
         applyAwarenessUpdate(awareness,
           readVarUint8Array(decoder), room);
         break
       case messageBcPeerId: {
+        console.log("Adding peers");
         const add = readUint8(decoder) === 1;
         const peerName = readVarString(decoder);
         if (peerName !== room.peerId && ((room.bcConns.has(peerName) && !add)
@@ -11404,9 +11409,8 @@
         break
       }
       case customMessage : {
-        let message = readVarUint8Array(decoder);
-        const utfDecoder = new TextDecoder('utf-8');
-        message = utfDecoder.decode(message);
+        let message = readVarString(decoder);
+        console.log(message);
         room.provider.emit('custom-message', [message]);
         break
       }
@@ -11683,8 +11687,7 @@
     broadcastCustomMessage (message) {
       const messageEncoder = createEncoder();
       writeVarUint(messageEncoder, customMessage);
-      const utfEncoder = new TextEncoder('utf-8');
-      writeVarUint8Array(messageEncoder, utfEncoder.encode(message));
+      writeVarString(messageEncoder, message);
       broadcastRoomMessage(this, toUint8Array(messageEncoder));
     }
 
@@ -11695,9 +11698,7 @@
         const currentState = this.awareness.getStates().get(targetClientId);
         const targetPeerId = currentState.peerId;
         const conn = this.webrtcConns.get(targetPeerId);
-        const utfEncoder = new TextEncoder('utf-8');
-        writeVarUint8Array(messageEncoder,
-          utfEncoder.encode(message));
+        writeVarString(messageEncoder, message);
         conn.peer.send(toUint8Array(messageEncoder));
       } catch (e) {}
     }
