@@ -11354,13 +11354,11 @@
     const awareness = room.awareness;
     const doc = room.doc;
     let sendReply = false;
-    console.log(messageType);
     switch (messageType) {
       case messageSync: {
         writeVarUint(encoder, messageSync);
         const syncMessageType = readSyncMessage(decoder, encoder,
           doc, room);
-        console.log(syncMessageType);
         if (syncMessageType === messageYjsSyncStep2
           && !room.synced) {
           syncedCallback();
@@ -11371,7 +11369,6 @@
         break
       }
       case messageQueryAwareness:
-        console.log("QureyAwareness");
         writeVarUint(encoder, messageAwareness);
         writeVarUint8Array(encoder,
           encodeAwarenessUpdate(awareness,
@@ -11379,12 +11376,10 @@
         sendReply = true;
         break
       case messageAwareness:
-        console.log("MessageAwareness");
         applyAwarenessUpdate(awareness,
           readVarUint8Array(decoder), room);
         break
       case messageBcPeerId: {
-        console.log("Adding peers");
         const add = readUint8(decoder) === 1;
         const peerName = readVarString(decoder);
         if (peerName !== room.peerId && ((room.bcConns.has(peerName) && !add)
@@ -11410,7 +11405,6 @@
       }
       case customMessage : {
         let message = readVarString(decoder);
-        console.log(message);
         room.provider.emit('custom-message', [message]);
         break
       }
