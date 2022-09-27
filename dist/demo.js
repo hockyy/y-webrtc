@@ -11369,7 +11369,6 @@
         break
       }
       case messageQueryAwareness:
-        console.trace("tracing");
         writeVarUint(encoder, messageAwareness);
         writeVarUint8Array(encoder,
           encodeAwarenessUpdate(awareness,
@@ -11377,7 +11376,6 @@
         sendReply = true;
         break
       case messageAwareness:
-        console.log("Awareness updating");
         applyAwarenessUpdate(awareness,
           readVarUint8Array(decoder), room);
         break
@@ -11833,9 +11831,6 @@
               const emitPeerChange = webrtcConns.has(data.from)
                 ? () => {}
                 : () => {
-                  console.log("emitting peer changes");
-                  console.log(data.from);
-                  console.log(Array.from(room.webrtcConns.keys()));
                   return room.provider.emit('peers', [{
                     removed: [],
                     added: [data.from],

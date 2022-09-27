@@ -197,7 +197,6 @@ const readMessage = (room, buf, syncedCallback) => {
       break
     }
     case messageQueryAwareness:
-      console.trace("tracing");
       encoding.writeVarUint(encoder, messageAwareness);
       encoding.writeVarUint8Array(encoder,
         awarenessProtocol.encodeAwarenessUpdate(awareness,
@@ -205,7 +204,6 @@ const readMessage = (room, buf, syncedCallback) => {
       sendReply = true;
       break
     case messageAwareness:
-      console.log("Awareness updating");
       awarenessProtocol.applyAwarenessUpdate(awareness,
         decoding.readVarUint8Array(decoder), room);
       break
@@ -661,9 +659,6 @@ class SignalingConn extends ws.WebsocketClient {
             const emitPeerChange = webrtcConns.has(data.from)
               ? () => {}
               : () => {
-                console.log("emitting peer changes");
-                console.log(data.from);
-                console.log(Array.from(room.webrtcConns.keys()));
                 return room.provider.emit('peers', [{
                   removed: [],
                   added: [data.from],
