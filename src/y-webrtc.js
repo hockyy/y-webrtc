@@ -212,7 +212,6 @@ export class WebrtcConn {
       syncProtocol.writeSyncStep1(encoder, doc)
       sendWebrtcConn(this, encoder)
       const awarenessStates = awareness.getStates()
-      console.log(awarenessStates)
       if (awarenessStates.size > 0) {
         const encoder = encoding.createEncoder()
         encoding.writeVarUint(encoder, messageAwareness)
@@ -548,13 +547,16 @@ export class SignalingConn extends ws.WebsocketClient {
             }
             const emitPeerChange = webrtcConns.has(data.from)
               ? () => {}
-              : () =>
-                room.provider.emit('peers', [{
+              : () => {
+                console.log("emitting peer changes")
+                return room.provider.emit('peers', [{
                   removed: [],
                   added: [data.from],
                   webrtcPeers: Array.from(room.webrtcConns.keys()),
                   bcPeers: Array.from(room.bcConns)
                 }])
+
+              }
             switch (data.type) {
               case 'announce':
                 if (webrtcConns.size < room.provider.maxConns) {
