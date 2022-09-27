@@ -11376,6 +11376,7 @@
         sendReply = true;
         break
       case messageAwareness:
+        console.log("Awareness updating");
         applyAwarenessUpdate(awareness,
           readVarUint8Array(decoder), room);
         break

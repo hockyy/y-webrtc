@@ -204,6 +204,7 @@ const readMessage = (room, buf, syncedCallback) => {
       sendReply = true;
       break
     case messageAwareness:
+      console.log("Awareness updating");
       awarenessProtocol.applyAwarenessUpdate(awareness,
         decoding.readVarUint8Array(decoder), room);
       break
