@@ -11495,6 +11495,7 @@
         writeSyncStep1(encoder, doc);
         sendWebrtcConn(this, encoder);
         const awarenessStates = awareness.getStates();
+        console.log(awarenessStates);
         if (awarenessStates.size > 0) {
           const encoder = createEncoder();
           writeVarUint(encoder, messageAwareness);
