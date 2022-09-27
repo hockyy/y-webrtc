@@ -86,6 +86,7 @@ const readMessage = (room, buf, syncedCallback) => {
       break
     }
     case messageQueryAwareness:
+      console.trace("tracing")
       encoding.writeVarUint(encoder, messageAwareness)
       encoding.writeVarUint8Array(encoder,
         awarenessProtocol.encodeAwarenessUpdate(awareness,

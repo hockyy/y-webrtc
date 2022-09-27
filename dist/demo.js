@@ -11369,6 +11369,7 @@
         break
       }
       case messageQueryAwareness:
+        console.trace("tracing");
         writeVarUint(encoder, messageAwareness);
         writeVarUint8Array(encoder,
           encodeAwarenessUpdate(awareness,
