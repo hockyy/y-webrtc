@@ -660,6 +660,8 @@ class SignalingConn extends ws.WebsocketClient {
               ? () => {}
               : () => {
                 console.log("emitting peer changes");
+                console.log(data.from);
+                console.log(Array.from(room.webrtcConns.keys()));
                 return room.provider.emit('peers', [{
                   removed: [],
                   added: [data.from],
